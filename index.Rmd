@@ -1,0 +1,907 @@
+---
+title: "AMG - obra"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+Información general 
+===================
+
+OBRA: VIVIENDA UNIFAMILIAR
+
+
+
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### DESCRIPCIÓN DEL PROYECTO
+
+Vivienda unifamiliar ubicada en el barrio Alma Gardenia, Luján de Cuyo
+
+La casa se desarrolla en un terreno de 740m2 
+
+Superficie cubierta: 379,4m2
+Superficie semicubierta: 56m2
+
+La misma consta de dos plantas; la planta baja esta destinada a 1 habitación principal con vestidor y baño en suite, un estudio, toilette, zona de cocina, lavandería, despensa, comedor, estar y galería, mientras que en la planta alta se encuentran 3 habitaciones, un baño y zona de estudio. Dentro del lote se realizará un quincho separado de la viviend, destinado a cochera y churrasquera. 
+
+
+<br><br><br>
+![](1.jpg){width=500}
+
+
+
+
+
+```{r}
+
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### DATOS GENERALES PARA LA OBRA
+
+- obra a realizar en 21 meses
+- administración a cargo del propietario
+- necesario contratar un seguro para los trabajadores, el cual administrará el propietario
+- necesario realizar los cómputos para hacer compras anticipadas
+- se solicita realizar check list de inspecciones para el barrio y municipalidad
+- certificaciones para la mano de obra gruesa: quincenales con adelantos semanales (2 adelantos y 2 certificaciones)
+
+```{r}
+
+```
+
+### UBICACIÓN GEOGRAFICA
+
+```{r}
+library(leaflet)
+leaflet() %>%
+  addTiles() %>%
+  addMarkers(lng=-68.857749, lat=-32.995042, popup="The birthplace of R")
+```
+
+***
+
+```{r}
+
+```
+
+
+Avance de obra
+==============
+
+column {data-width=400}
+-------------------------------------
+
+### ESTADO ACTUAL DE LA OBRA
+en esta sección se muestra el estado de la obra en el mes de noviembre
+![](7.jpg){width=150}
+![](5.jpg){width=150}
+
+```{r}
+```
+
+   
+### AVANCE QUINCENAL PORCENTUAL 
+
+```{r curva-s-avance-2, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4}
+library(plotly)
+library(dplyr)
+library(tidyr) 
+
+# --- 1. Definición de Parámetros y Fechas ---
+meses_total <- 16 
+avance_teorico_mensual <- 8.5 
+
+# Fechas y nombres de meses
+fechas <- seq.Date(from = as.Date("2025-04-01"), by = "month", length.out = meses_total)
+nombres_meses <- format(fechas, "%b %Y")
+
+# Avance Real y Teórico
+avance_real_porc <- c(3, 4, 2.5, 6, 6, 4, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0)
+avance_teorico_porc <- rep(avance_teorico_mensual, meses_total)
+
+# --- 2. Creación, Cálculo Acumulado y Transformación ---
+datos_curva <- data.frame(
+  Mes = factor(nombres_meses, levels = nombres_meses),
+  Teorico = avance_teorico_porc,
+  Real = avance_real_porc
+)
+
+datos_curva <- datos_curva %>%
+  mutate(
+    Acumulado_Teorico = cumsum(Teorico),
+    Acumulado_Real = cumsum(Real)
+  )
+
+datos_largo_s <- datos_curva %>%
+  select(Mes, Acumulado_Teorico, Acumulado_Real) %>%
+  pivot_longer(
+    cols = starts_with("Acumulado_"),
+    names_to = "Tipo_Avance",
+    values_to = "Acumulado"
+  ) %>%
+  mutate(Tipo_Avance = gsub("Acumulado_", "", Tipo_Avance)) %>%
+  mutate(Texto_Tooltip = paste0(Mes, "<br>", Tipo_Avance, " Acumulado: ", round(Acumulado, 2), "%"))
+
+
+# --- 3. Creación del Gráfico de Curva S con Plotly ---
+p_s <- plot_ly(datos_largo_s, 
+               x = ~Mes, 
+               y = ~Acumulado, 
+               type = 'scatter', 
+               mode = 'lines+markers', 
+               color = ~Tipo_Avance,
+               colors = c("Teorico" = "#FF8C00", "Real" = "#28a745"), 
+               line = list(width = 3),
+               marker = list(size = 8),
+               text = ~Texto_Tooltip,
+               hoverinfo = 'text'
+               ) %>% 
+  layout( # ESTA ES LA FUNCIÓN QUE FALTABA O ESTABA CORTADA
+    title = list(text = "Curva S (Avance Acumulado)", font = list(size = 14)),
+    xaxis = list(title = "", showgrid = FALSE, tickangle = -45, zeroline = FALSE),
+    yaxis = list(title = "Avance Acumulado (%)", range = c(0, 100)),
+    legend = list(title = list(text = 'Avance'), orientation = "h", x = 0.5, y = 1.05, xanchor = 'center')
+  )
+
+# Mostrar el gráfico
+p_s
+```   
+    
+column {data-width=600}
+-------------------------------------    
+    
+### AVANCE ESPERADO VS. AVANCE REAL
+
+```{r grafico-interactivo-avance-v4, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=6}
+library(plotly)
+library(dplyr)
+library(tidyr) 
+
+# --- 1. Definición de Parámetros y Fechas ---
+meses_total <- 16 # Periodo de Abril 2025 a Julio 2026
+porcentaje_total <- 100
+
+# NUEVO AVANCE TEÓRICO: Reducido a 8.5% para que las barras sean más bajas (100 / 11.76 meses)
+avance_teorico_mensual <- 8.5 
+
+# Fechas desde Abril 2025 hasta Julio 2026
+fechas <- seq.Date(from = as.Date("2025-04-01"), by = "month", length.out = meses_total)
+nombres_meses <- format(fechas, "%b %Y")
+
+# Avance Real proporcionado (16 valores)
+avance_real_porc <- c(3, 4, 2.5, 6, 6, 4, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0)
+
+# Avance Teórico (El mismo valor fijo en 8.5% para cada uno de los 16 meses)
+avance_teorico_porc <- rep(avance_teorico_mensual, meses_total)
+
+# --- 2. Creación y Transformación del DataFrame ---
+datos_avance <- data.frame(
+  Mes = factor(nombres_meses, levels = nombres_meses), # Asegura el orden cronológico
+  Teorico = avance_teorico_porc,
+  Real = avance_real_porc
+)
+
+# Transformar los datos a formato largo
+datos_largo <- datos_avance %>%
+  pivot_longer(
+    cols = c(Teorico, Real),
+    names_to = "Tipo_Avance",
+    values_to = "Porcentaje"
+  )
+
+# Calcular Avance Acumulado para el tooltip
+datos_largo <- datos_largo %>%
+  group_by(Tipo_Avance) %>%
+  mutate(Acumulado = cumsum(Porcentaje)) %>%
+  ungroup() %>%
+  mutate(Texto_Tooltip = paste0(
+    "Mes: ", Mes, "<br>",
+    "Avance Mensual: ", round(Porcentaje, 2), "%<br>",
+    "Acumulado: ", round(Acumulado, 2), "%"
+  ))
+
+# --- 3. Creación del Gráfico Interactivo con Plotly ---
+p <- plot_ly(datos_largo, 
+             x = ~Mes, 
+             y = ~Porcentaje, 
+             type = 'bar', 
+             color = ~Tipo_Avance,
+             # Colores: Naranja para Teórico, Verde para Real
+             colors = c("Teorico" = "#FF8C00", "Real" = "#28a745"), 
+             text = ~Texto_Tooltip,
+             hoverinfo = 'text'
+             ) %>%
+  layout(
+    title = "Comparación de Avance de Obra: Teórico (8.5% Mensual) vs. Real",
+    xaxis = list(title = "Mes", tickangle = -45, zeroline = FALSE),
+    # Ajustar rango Y para el nuevo Avance Teórico (8.5%)
+    yaxis = list(title = "Avance Mensual (%)", range = c(0, avance_teorico_mensual * 1.2)),
+    barmode = 'group', # Barras agrupadas
+    legend = list(title = list(text = 'Tipo de Avance'), orientation = "h", x = 0.5, y = -0.3, xanchor = 'center')
+  )
+
+# Mostrar el gráfico
+p
+```
+
+Pagos y economía de obra
+========================
+
+Row
+-------------------------------------
+    
+### INVERSION ACUMULADA E INVERSION RESTANTE
+
+```{r gasto-obra-dona-final-v2, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=6}
+library(plotly)
+library(dplyr)
+
+# --- 1. DATOS CALCULADOS ---
+gasto_acumulado <- 6500 * 8         # $52,000 USD
+presupuesto_total <- 210000          
+monto_pendiente <- presupuesto_total - gasto_acumulado # $158,000 USD
+
+# DataFrame para la dona
+datos_gasto <- data.frame(
+  Categoria = c("Gasto Acumulado", "Monto Pendiente"),
+  Monto = c(gasto_acumulado, monto_pendiente)
+) %>%
+  mutate(Porcentaje = Monto / presupuesto_total * 100) %>%
+  mutate(Monto_Fmt = paste0("US$", format(Monto, big.mark = ".", decimal.mark = ",", scientific = FALSE))) %>%
+  # Crear el texto completo de Tooltip con USD y %
+  mutate(Texto_Tooltip = paste0(
+    "<b>", Categoria, "</b><br>",
+    "Monto: ", Monto_Fmt, "<br>",
+    "Porcentaje: ", round(Porcentaje, 2), "%"
+  ))
+
+# --- 2. GRÁFICO DE DONAS INTERACTIVO CON % INTERIOR ---
+p_dona_gasto <- plot_ly(datos_gasto, 
+                  labels = ~Categoria, 
+                  values = ~Monto, 
+                  type = 'pie', 
+                  hole = 0.7, # Hacemos la dona un poco más ancha para que quepa el texto
+                  marker = list(colors = c("#28A745", "#FF8C00")), # Verde (Gastado) y Naranja (Pendiente)
+                  
+                  # CAMBIO CLAVE: Mostrar el porcentaje dentro de la porción
+                  textinfo = 'percent', 
+                  textfont = list(color = '#FFFFFF', size = 16), # Texto interior blanco y más grande
+                  
+                  hoverinfo = 'text', 
+                  text = ~Texto_Tooltip, # Mantiene la interactividad para ver el USD
+                  showlegend = TRUE) %>% 
+  
+  layout(
+    title = list(text = "Ejecución Presupuestaria de Obra (USD)", y = 0.95),
+    
+    # Anotación central (Título más claro para el centro)
+    annotations = list(
+      x = 0.5, 
+      y = 0.5, 
+      text = paste0("Total: <br><b>US$", format(presupuesto_total, big.mark = ".", decimal.mark = ",", scientific = FALSE), "</b>"),
+      showarrow = FALSE, 
+      font = list(size = 14)
+    ),
+    
+    margin = list(t = 50) 
+  )
+
+p_dona_gasto
+```
+ 
+### CURVA FINANCIERA
+
+```{r curva-s-financiera-v5, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=5}
+library(plotly)
+library(dplyr)
+library(tidyr) 
+
+# --- 1. Definición de Parámetros y Fechas ---
+meses_total <- 16 # Periodo de visualización: Abril 2025 a Julio 2026
+presupuesto_total <- 210000
+
+# Gasto Planeado (15 meses / $210,000)
+gasto_esperado_mensual <- 14000 
+
+# Definición de Períodos de Gasto Real
+# Meses: 1: Abr 2025, 2: May 2025, ..., 16: Jul 2026
+mes_base_inicio <- 1  # Abril 2025
+mes_extra_inicio <- 2  # Mayo 2025
+mes_extra_fin <- 11   # Febrero 2026 (mes 11)
+mes_final_inicio <- 12 # Marzo 2026
+
+# Tasas de Gasto Real
+tasa_base_inicial <- 14000  # Abr 2025
+tasa_extra <- 19000         # May 2025 a Feb 2026
+tasa_final <- 13000         # Mar 2026 a Jul 2026
+
+# Fechas (16 meses)
+fechas <- seq.Date(from = as.Date("2025-04-01"), by = "month", length.out = meses_total)
+nombres_meses <- format(fechas, "%b %Y")
+
+# --- 2. Creación de Datos ---
+
+# Gasto Esperado (Fijo para todos los 16 meses, aunque la obra plan era 15)
+gasto_esperado_usd <- rep(gasto_esperado_mensual, meses_total)
+
+# Gasto Real Proyectado (por fases)
+gasto_real_usd <- c(
+  tasa_base_inicial, # Mes 1: 14000
+  rep(tasa_extra, mes_extra_fin - mes_extra_inicio + 1), # Meses 2 a 11: 19000
+  rep(tasa_final, meses_total - mes_extra_fin) # Meses 12 a 16: 13000
+)
+
+# Ajuste si el vector es incorrecto (debería ser 16)
+if(length(gasto_real_usd) != meses_total) {
+  stop("Error de cálculo en la longitud del vector de Gasto Real.")
+}
+
+# Crear DataFrame base
+datos_curva_fin <- data.frame(
+  Mes = factor(nombres_meses, levels = nombres_meses),
+  Esperado = gasto_esperado_usd,
+  Real = gasto_real_usd
+)
+
+# --- 3. Cálculo de la Curva S (Gasto Acumulado) ---
+datos_curva_fin <- datos_curva_fin %>%
+  mutate(
+    Acumulado_Esperado = cumsum(Esperado),
+    Acumulado_Real = cumsum(Real)
+  )
+
+max_gasto_real <- max(datos_curva_fin$Acumulado_Real)
+
+
+# Transformar los datos a formato largo para plotly
+datos_largo_s_fin <- datos_curva_fin %>%
+  select(Mes, Acumulado_Esperado, Acumulado_Real) %>%
+  pivot_longer(
+    cols = starts_with("Acumulado_"),
+    names_to = "Tipo_Gasto",
+    values_to = "Acumulado"
+  ) %>%
+  mutate(Tipo_Gasto = gsub("Acumulado_", "", Tipo_Gasto)) %>%
+  # Formatear el monto para el tooltip (USD)
+  mutate(Acumulado_Fmt = paste0("US$", format(Acumulado, big.mark = ".", decimal.mark = ",", scientific = FALSE))) %>%
+  # Preparar texto para el tooltip
+  mutate(Texto_Tooltip = paste0(Mes, "<br>Gasto ", Tipo_Gasto, ": ", Acumulado_Fmt))
+
+
+# --- 4. Creación del Gráfico de Curva S Financiera con Plotly ---
+p_s_fin <- plot_ly(datos_largo_s_fin, 
+               x = ~Mes, 
+               y = ~Acumulado, 
+               type = 'scatter', 
+               mode = 'lines+markers', 
+               color = ~Tipo_Gasto,
+               # Colores: Naranja para Esperado, Verde para Real
+               colors = c("Esperado" = "#FF8C00", "Real" = "#28a745"), 
+               line = list(width = 3),
+               marker = list(size = 8),
+               text = ~Texto_Tooltip,
+               hoverinfo = 'text'
+               ) %>%
+  layout(
+    title = list(text = "Curva S Financiera Acumulada (Plan vs. Proyección)", font = list(size = 16)),
+    xaxis = list(title = "Mes", showgrid = FALSE, tickangle = -45, zeroline = FALSE),
+    # Ajustar rango Y para el nuevo máximo de $269,000
+    yaxis = list(title = "Gasto Acumulado (US$)", range = c(0, max_gasto_real * 1.05)),
+    legend = list(title = list(text = 'Tipo de Gasto'), orientation = "h", x = 0.5, y = 1.05, xanchor = 'center')
+  )
+
+# Mostrar el gráfico
+p_s_fin
+``` 
+
+Row
+-------------------------------------
+    
+### GASTOS SEMANALES PROMEDIO
+    
+```{r grafico-pastel-costos-v3, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=6}
+library(plotly)
+library(dplyr)
+
+# --- 1. Definición de Variables (Materiales corregido a 500) ---
+datos_costos <- data.frame(
+  Gasto = c("Materiales", "Mano de Obra", "Extra MDO", "Honorarios", "Mantenimiento", "Maquinaria"),
+  Monto = c(500, 312.5, 155, 250, 188, 218) # <-- CORREGIDO: 500
+)
+
+# Calcular el nuevo total y formatear los montos
+costo_total_semanal <- sum(datos_costos$Monto) # Nuevo Total: 1623.5
+
+datos_costos <- datos_costos %>%
+  mutate(Porcentaje = Monto / costo_total_semanal * 100) %>%
+  mutate(Monto_Fmt = paste0("US$", format(Monto, big.mark = ".", decimal.mark = ",", scientific = FALSE))) %>%
+  # Crear el texto completo de Tooltip
+  mutate(Texto_Tooltip = paste0(
+    "<b>", Gasto, "</b><br>",
+    "Costo: ", Monto_Fmt, "<br>",
+    "Porcentaje: ", round(Porcentaje, 2), "%"
+  ))
+
+# --- 2. GRÁFICO DE PASTEL INTERACTIVO (Evitando Superposición) ---
+p_pastel_costos <- plot_ly(datos_costos, 
+                  labels = ~Gasto, 
+                  values = ~Monto, 
+                  type = 'pie', 
+                  hole = 0.4, 
+                  marker = list(line = list(color = '#FFFFFF', width = 1)),
+                  
+                  # Solución a la Superposición: Etiquetas fuera
+                  textposition = 'outside', 
+                  textinfo = 'percent',  
+                  insidetextorientation = 'radial', 
+                  
+                  # Configuración de Interactividad
+                  hoverinfo = 'text', 
+                  text = ~Texto_Tooltip, 
+                  showlegend = TRUE) %>% 
+  
+  layout(
+    title = list(text = paste0("Distribución de Costos Semanales (Total: US$", format(costo_total_semanal, big.mark = ".", decimal.mark = ",", scientific = FALSE), ")"), y = 0.95),
+    
+    # Asegurar que haya espacio para las etiquetas exteriores
+    autosize = T,
+    margin = list(t = 50, l = 10, r = 10, b = 10),
+    legend = list(orientation = "h", x = 0.5, y = -0.1, xanchor = 'center')
+  )
+
+p_pastel_costos
+```
+    
+### Chart 4
+
+```{r grafico-rendimiento-hibrido-unificado, echo=FALSE, message=FALSE, warning=FALSE, fig.width=10, fig.height=8}
+library(plotly)
+library(dplyr)
+library(tidyr) 
+
+# --- 1. DEFINICIÓN DE PARÁMETROS ---
+meses_total <- 16 # Abril 2025 a Julio 2026
+meses_obra <- 15 
+
+# Gasto y Avance Esperado (Plan)
+gasto_esperado_mensual <- 14000 
+avance_esperado_mensual <- 100 / meses_obra # ~6.67%
+
+# Factor de Escala para el eje X (14000 USD debe ser 6.67% visualmente)
+escala_usd_a_porc <- avance_esperado_mensual / gasto_esperado_mensual 
+
+# Fechas (16 meses)
+fechas <- seq.Date(from = as.Date("2025-04-01"), by = "month", length.out = meses_total)
+nombres_meses <- format(fechas, "%b %Y")
+
+# --- 2. GASTO Y AVANCE REAL PROYECTADO ---
+
+# Gasto Real ($) - 16 valores
+gasto_real_usd <- c(
+  14000,                            # Abr 2025 (Mes 1)
+  rep(19000, 10),                   # May 2025 - Feb 2026 (Meses 2 a 11)
+  rep(13000, 5)                     # Mar 2026 - Jul 2026 (Meses 12 a 16)
+)
+
+# Avance Real (%) - 16 valores
+avance_real_porc <- c(3, 4, 2.5, 6, 6, 4, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0)
+
+# --- 3. CREACIÓN DEL DATAFRAME Y NORMALIZACIÓN ---
+
+datos_hibrido <- data.frame(
+  Mes = factor(nombres_meses, levels = rev(nombres_meses)), # Revertir para eje Y
+  Avance_Real = avance_real_porc,
+  Gasto_Real = gasto_real_usd
+) %>%
+  mutate(
+    # Normalizar el Gasto Real a la escala de porcentaje para la visualización
+    Gasto_Real_Escalado = Gasto_Real * escala_usd_a_porc,
+    
+    # Tooltip para Avance
+    Texto_Avance = paste0(Mes, "<br><b>Avance Físico</b>: ", round(Avance_Real, 2), "%"),
+    
+    # Tooltip para Gasto
+    Texto_Gasto = paste0(Mes, "<br><b>Gasto Mensual</b>: US$", format(Gasto_Real, big.mark = "."))
+  )
+
+# Transformar a formato largo para plotly (Avance y Gasto son tipos de barras)
+datos_largo <- datos_hibrido %>%
+  pivot_longer(
+    cols = c(Avance_Real, Gasto_Real_Escalado),
+    names_to = "Metrica",
+    values_to = "Valor_Escalado"
+  ) %>%
+  mutate(
+    Tipo_Barra = case_when(
+      Metrica == "Avance_Real" ~ "Avance Físico (%)",
+      Metrica == "Gasto_Real_Escalado" ~ "Gasto Financiero ($)"
+    ),
+    Texto_Tooltip = ifelse(Metrica == "Avance_Real", Texto_Avance, Texto_Gasto)
+  )
+
+# --- 4. GRÁFICO DE BARRAS AGRUPADAS (EJE ÚNICO) ---
+
+p_hibrido <- plot_ly(datos_largo, 
+                     x = ~Valor_Escalado, 
+                     y = ~Mes, 
+                     type = 'bar', 
+                     orientation = 'h',
+                     color = ~Tipo_Barra, # El color intercala las barras
+                     colors = c("Avance Físico (%)" = "#28A745", # Verde
+                                "Gasto Financiero ($)" = "#FF8C00"), # Naranja
+                     text = ~Texto_Tooltip, 
+                     hoverinfo = 'text'
+                     ) %>%
+  layout(
+    title = "Comparación Mensual: Avance Físico vs. Gasto Financiero",
+    
+    # Configuración de Eje Y (Meses)
+    yaxis = list(title = "", categoryorder = "array", categoryarray = ~rev(nombres_meses)),
+    
+    # Configuración de Eje X (Escala Combinada)
+    xaxis = list(
+      title = paste0("Escala Combinada: Avance (%) o Gasto (US$)"),
+      # Etiquetas que explican la escala:
+      tickvals = c(0, avance_esperado_mensual * 0.5, avance_esperado_mensual, avance_esperado_mensual * 1.5),
+      ticktext = c("0", "3.33% / 7K USD", "6.67% / 14K USD", "10.00% / 21K USD"),
+      zeroline = FALSE
+    ),
+    
+    barmode = 'group', # Agrupar las barras de Avance y Gasto por mes
+    legend = list(orientation = "h", x = 0.5, y = -0.1, xanchor = 'center')
+  )
+
+# Mostrar el gráfico
+p_hibrido
+```
+
+
+
+
+
+Proyección 
+========================================================
+
+Column {data-width=550}
+-------------------------------------
+    
+### AVANCE RUBROS
+    
+
+```{r avance-por-rubro-final, echo=FALSE, message=FALSE, warning=FALSE, fig.width=8, fig.height=6}
+library(plotly)
+library(dplyr)
+library(tidyr) 
+
+# --- 1. DATOS DE AVANCE POR RUBRO ---
+datos_avance_rubros <- data.frame(
+  Rubro = c(
+    "Fundaciones",
+    "Mampostería P.B.",
+    "Entrepiso",
+    "Cubiertas P.B.",
+    "Mampostería P.A.",
+    "Cubiertas P.A.",
+    "Revoques",
+    "Contrapisos",
+    "Losa Radiante",
+    "Instalación Eléctrica",
+    "Instalación Sanitaria",
+    "Cielorrasos",
+    "Pintura Interior",
+    "Pintura Exterior",
+    "Carpinterías",
+    "Terminaciones Varias"
+  ),
+  Avance_Porcentaje = c(
+    100, 100, 90, 80, 0, 0, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0 
+  )
+)
+
+# --- PREPARACIÓN DE DATOS Y COLORES ---
+TEXT_SIZE <- 12 # Tamaño del texto de porcentaje
+# Invertir niveles del factor para que "Fundaciones" aparezca arriba
+datos_avance_rubros <- datos_avance_rubros %>%
+  mutate(
+    Rubro = factor(Rubro, levels = rev(Rubro)), 
+    Porcentaje_Restante = 100 - Avance_Porcentaje,
+    
+    # 1. Lógica para el COLOR DE BARRA (Avance)
+    Estado_Barra = case_when(
+      Avance_Porcentaje == 100 ~ "Completado",
+      Avance_Porcentaje > 0 ~ "En Progreso",
+      TRUE ~ "Pendiente" 
+    ),
+    
+    # 2. Lógica para el COLOR DE TEXTO
+    Text_Color = case_when(
+      Avance_Porcentaje == 100 ~ "#008000",      # Verde Oscuro (100%)
+      Avance_Porcentaje > 0 ~ "#F08080",         # Rojo Claro (0% < Avance < 100%)
+      TRUE ~ "#696969"                           # Gris Oscuro (0%)
+    ),
+    
+    # 3. Texto a mostrar
+    Texto_Porcentaje = paste0(Avance_Porcentaje, "%"),
+    Texto_Tooltip_Avance = paste0("<b>", Rubro, "</b><br>Avance: ", Avance_Porcentaje, "%"),
+    Texto_Tooltip_Restante = paste0("<b>", Rubro, "</b><br>Pendiente: ", Porcentaje_Restante, "%")
+  )
+
+# Paleta de colores para las barras
+COLORES_BARRA <- c(
+  "Completado" = "#90EE90",       # Verde Claro
+  "En Progreso" = "#F5A9A9",      # Rojo Claro
+  "Restante" = "#C0C0C0"          # Gris Medio
+)
+
+# --- 2. GRÁFICO DE BARRAS APILADAS ---
+p_rubros_final <- plot_ly(datos_avance_rubros) %>%
+  
+  # BARRA DE PORCENTAJE RESTANTE (GRIS - EL FONDO)
+  add_trace(
+    y = ~Rubro,
+    x = ~Porcentaje_Restante,
+    type = 'bar',
+    orientation = 'h',
+    name = 'Pendiente', 
+    marker = list(color = COLORES_BARRA["Restante"], line = list(color = 'black', width = 1)),
+    hoverinfo = 'text',
+    text = ~Texto_Tooltip_Restante
+  ) %>%
+  
+  # BARRA DE AVANCE (RELLENO - COLOR SEGÚN ESTADO)
+  add_trace(
+    y = ~Rubro,
+    x = ~Avance_Porcentaje,
+    type = 'bar',
+    orientation = 'h',
+    name = 'Avance',
+    color = ~Estado_Barra, 
+    colors = c("Completado" = COLORES_BARRA["Completado"], 
+               "En Progreso" = COLORES_BARRA["En Progreso"]),
+    
+    # Configuración de Texto y Estilo
+    text = ~Texto_Porcentaje,
+    textposition = 'auto', # Ajuste automático de la posición del texto
+    textfont = list(
+        color = datos_avance_rubros$Text_Color, # Color dinámico
+        size = TEXT_SIZE                        # Tamaño aumentado
+    ),
+    hoverinfo = 'text',
+    text = ~Texto_Tooltip_Avance, 
+    marker = list(line = list(color = 'black', width = 1))
+  ) %>%
+  
+  layout(
+    title = list(text = "Avance Físico Actual por Rubro de Obra", font = list(size = 14)),
+    barmode = 'stack', 
+    
+    xaxis = list(
+      title = "Porcentaje de Avance (%)",
+      tickmode = 'linear', 
+      tick0 = 0, 
+      dtick = 10, 
+      range = c(0, 100)
+    ),
+    
+    yaxis = list(title = "", categoryorder = "array", categoryarray = levels(datos_avance_rubros$Rubro)),
+    
+    # Leyenda compacta
+    legend = list(orientation = "h", x = 0.5, y = -0.15, xanchor = 'center', font = list(size = 10)),
+    
+    # Ajuste de margen para achicar el gráfico
+    margin = list(l = 150, r = 20, t = 40, b = 60)
+  )
+
+p_rubros_final
+```
+   
+Column {data-width=450}
+-------------------------------------
+   
+### AVANCE PROYECTADO DESDE NOVIEMBRE
+
+
+```{r grafico-dona-mensual-corregido, echo=FALSE, message=FALSE, warning=FALSE, fig.width=4, fig.height=4}
+library(plotly)
+library(dplyr)
+
+# --- 1. DATOS Y CÁLCULO DE PERIODOS ---
+
+# Generar la secuencia de meses (16 meses) SIN lubridate
+fechas <- seq.Date(from = as.Date("2025-04-01"), to = as.Date("2026-07-01"), by = "month")
+nombres_meses <- format(fechas, "%b %Y")
+
+# Porcentajes originales
+avance_p1_original <- 3.57 # Abr-Nov
+avance_p2_original <- 9.37 # Dic-Jul
+
+# Calcular el total de porcentaje original (para normalizar)
+total_original <- (8 * avance_p1_original) + (8 * avance_p2_original)
+
+# Factor de normalización para que el total sea 100%
+factor_normalizacion <- 100 / total_original
+
+# Calcular porcentajes normalizados
+avance_p1_normalizado <- avance_p1_original * factor_normalizacion
+avance_p2_normalizado <- avance_p2_original * factor_normalizacion
+
+# Crear el dataframe para la dona
+datos_dona_mensual <- data.frame(
+  Mes = nombres_meses,
+  Fecha = fechas
+) %>%
+  mutate(
+    Porcentaje = case_when(
+      Fecha >= as.Date("2025-04-01") & Fecha <= as.Date("2025-11-01") ~ avance_p1_normalizado,
+      Fecha >= as.Date("2025-12-01") & Fecha <= as.Date("2026-07-01") ~ avance_p2_normalizado,
+      TRUE ~ 0.0
+    ),
+    # Formato para el texto DENTRO de la dona (Mes y %)
+    Texto_Etiqueta_Interior = paste0(format(Fecha, "%b %y"), "\n", round(Porcentaje, 2), "%"),
+    # Formato para el Tooltip
+    Texto_Tooltip = paste0("<b>", Mes, "</b><br>Esperado (Normalizado): ", round(Porcentaje, 2), "%")
+  )
+
+# --- 2. PALETA DE COLORES (Periodos P1 y P2) ---
+# Azul claro para el primer periodo (bajo avance), Azul oscuro para el segundo (alto avance)
+colores_segmentos <- c(rep("#87CEEB", 8), rep("#1f77b4", 8)) 
+
+# --- 3. GRÁFICO DE DONA COMPLETA con 16 Segmentos ---
+p_dona_mensual <- plot_ly(datos_dona_mensual, 
+                          labels = ~Mes, 
+                          values = ~Porcentaje, 
+                          type = 'pie', 
+                          marker = list(colors = colores_segmentos, 
+                                        line = list(color = '#FFFFFF', width = 1)),
+                          hole = 0.6,
+                          
+                          # Mostrar el texto DENTRO del segmento
+                          text = ~Texto_Etiqueta_Interior, 
+                          textinfo = 'text', # Indica que el texto a mostrar es el de la columna 'text'
+                          insidetextfont = list(color = '#000000', size = 7), # Texto más pequeño y oscuro
+                          
+                          # Configuración de Tooltip
+                          hoverinfo = 'text', 
+                          customdata = ~Texto_Tooltip, # Usamos customdata para el tooltip
+                          hovertext = ~Texto_Tooltip, # Usamos la columna Tooltip para el texto al pasar el ratón
+                          
+                          showlegend = FALSE
+                          ) %>% 
+  layout(
+    title = list(text = "Distribución del Avance Esperado (100%)", font = list(size = 12)),
+    
+    xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+    yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+    
+    # Anotación central (mostrando el 100% total)
+    annotations = list(
+      x = 0.5, 
+      y = 0.5, 
+      text = paste0("100%"), 
+      showarrow = FALSE, 
+      font = list(size = 20, color = "#1f77b4")
+    ),
+    
+    margin = list(t = 40, b = 20, l = 20, r = 20)
+  )
+
+p_dona_mensual
+```   
+ 
+### INDICADORES DE GESTIÓN
+
+```{r indicadores-flechas-circulos-color, echo=FALSE, message=FALSE, warning=FALSE, fig.width=4, fig.height=4}
+library(plotly)
+library(dplyr)
+
+# --- 1. DATOS ---
+datos_indicadores <- data.frame(
+  ID = 1:4,
+  Valor = c(4, 3, 1, 2), 
+  Descripcion = c(
+    "Items semanales completados x rubro",
+    "Visitas a obra semanales para resolver problemas y avanzar",
+    "Reunión semanal x rubro para mostrar el avance de cada uno",
+    "Reporte quincenal x mes para la desarrolladora/cliente"
+  ),
+  # Colores específicos para cada círculo
+  Color_Circulo = c("#28a745", "#FF00FF", "#00BFFF", "#FFD700") # Verde, Magenta, Azul Cielo, Dorado
+)
+
+# Ajuste de posición para distribuir verticalmente
+datos_indicadores <- datos_indicadores %>%
+  mutate(
+    y_pos = seq(from = 0.9, to = 0.1, length.out = n()),
+    x_circle = 0.85, # Posición X para el centro del círculo
+    x_text = 0.05,   # Posición X para el inicio del texto
+    x_arrow_start = 0.70 # Posición X donde comienza la flecha
+  )
+
+# --- 2. GENERACIÓN DEL GRÁFICO BASE (Círculos y Valores) ---
+
+# Trazas de círculos y valores (usando los colores definidos)
+p_indicadores_final_color <- plot_ly(datos_indicadores) %>%
+  
+  # 2.1. Trazas para los círculos (marcadores grandes)
+  add_trace(
+    x = ~x_circle, 
+    y = ~y_pos, 
+    type = 'scatter', 
+    mode = 'markers',
+    marker = list(
+      size = 35, 
+      color = ~Color_Circulo, # Usa el color definido en el dataframe
+      line = list(color = 'black', width = 0.5) 
+    ),
+    hoverinfo = 'none',
+    showlegend = FALSE
+  ) %>%
+  
+  # 2.2. Trazas para el número dentro del círculo
+  add_trace(
+    x = ~x_circle, 
+    y = ~y_pos, 
+    type = 'scatter', 
+    mode = 'text',
+    text = ~paste0(Valor), 
+    textfont = list(color = 'white', size = 14, family = "Arial"),
+    hoverinfo = 'none',
+    showlegend = FALSE
+  ) %>%
+  
+  # 2.3. Configuración del Layout y Anotaciones (Texto y Flechas)
+  layout(
+    title = list(text = "Indicadores de Gestión", font = list(size = 14)),
+    
+    # Ocultar ejes
+    xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE, range = c(0, 1)),
+    yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE, range = c(0, 1)),
+    
+    margin = list(l = 20, r = 20, t = 40, b = 20),
+    
+    # Generar todas las anotaciones (flechas y texto descriptivo)
+    annotations = lapply(1:nrow(datos_indicadores), function(i) {
+      
+      # Anotación 1: Texto Descriptivo
+      desc_annotation <- list(
+        x = datos_indicadores$x_text[i], 
+        y = datos_indicadores$y_pos[i],
+        text = datos_indicadores$Descripcion[i],
+        showarrow = FALSE,
+        xanchor = "left",
+        font = list(color = 'grey', size = 12, family = "Arial")
+      )
+      
+      # Anotación 2: Flecha (Línea)
+      arrow_annotation <- list(
+        x = datos_indicadores$x_circle[i], 
+        y = datos_indicadores$y_pos[i],
+        ax = datos_indicadores$x_arrow_start[i], 
+        ay = datos_indicadores$y_pos[i], 
+        text = "", # Texto vacío para la flecha
+        showarrow = TRUE,
+        arrowhead = 2, 
+        arrowsize = 1,
+        arrowwidth = 2, # Grosor de la línea de la flecha
+        arrowcolor = datos_indicadores$Color_Circulo[i], # Color de la flecha igual al círculo
+        standoff = 8 # Separación del círculo (mayor separación para evitar solapamiento)
+      )
+      
+      return(list(desc_annotation, arrow_annotation))
+    }) %>% 
+    unlist(recursive = FALSE)
+  )
+
+p_indicadores_final_color
+``` 
